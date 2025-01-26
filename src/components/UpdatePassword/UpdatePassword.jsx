@@ -4,30 +4,28 @@ import React, { useContext, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import * as Yup from 'yup'
 import { AuthContext } from '../../context/AuthContextProvider'
-export default function Login() {
+export default function updatePassword() {
   let { setToken } = useContext(AuthContext)
   let [errorMessage, setError] = useState(null)
   const baseUrl = 'https://ecommerce.routemisr.com'
   let navg = useNavigate()
   let validYup = Yup.object({
     email: Yup.string().required("email required").email("enter valid email"),
-    password: Yup.string().required("password required").matches(/^(?=.*[0-9])(?=.*[!@#$%^&*])[a-zA-Z0-9!@#$%^&*]{6,16}$/, "password invalid"),
+    newPassword: Yup.string().required("newPassword required").matches(/^(?=.*[0-9])(?=.*[!@#$%^&*])[a-zA-Z0-9!@#$%^&*]{6,16}$/, "newPassword invalid"),
   })
   let initialValues = {
     email: "",
-    password: "",
+    Password: "",
   }
   let LoginForm = useFormik({
     initialValues,
-    onSubmit: LoginApi,
+    onSubmit: updatePassword,
     validationSchema: validYup
   });
-  async function LoginApi(data) {
-    let req = await axios.post(`${baseUrl}/api/v1/auth/signin`, data)
+  async function updatePassword(data) {
+    axios.put(`${baseUrl}/api/v1/auth/resetPassword`, data)
       .then((req) => {
-        if (req.data.message == 'success') {
-          setToken(req.data.token)
-          localStorage.setItem("token", req.data.token)
+        if (req.data.token) {
           navg('/')
         }
       })
@@ -53,18 +51,16 @@ export default function Login() {
           {LoginForm.touched.email && LoginForm.errors.email ? <p className="text-red-950">{LoginForm.errors.email}</p> : ""}
         </div>
         <div className="mb-5">
-          <label htmlFor="password" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Your password</label>
+          <label htmlFor="password" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Your newPassword</label>
           <input onChange={LoginForm.handleChange}
             onBlur={LoginForm.handleBlur}
-            value={LoginForm.values.password} type="password" id="password" name="password" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-active focus:border-active block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-active dark:focus:border-active" />
-          {LoginForm.touched.password && LoginForm.errors.password ? <p className="text-red-950">{LoginForm.errors.password}</p> : ""}
+            value={LoginForm.values.newPassword} type="password" id="newPassword" name="newPassword" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-active focus:border-active block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-active dark:focus:border-active" />
+          {LoginForm.touched.newPassword && LoginForm.errors.newPassword ? <p className="text-red-950">{LoginForm.errors.newPassword}</p> : ""}
         </div>
-        <Link to="/ForgetPassword">Forget Password ?</Link>
-        <br/>
-        <br/>
+      
         <button
           disabled={!(LoginForm.isValid && LoginForm.dirty)}
-          type="submit" className="text-white bg-active hover:bg-active focus:ring-4 focus:outline-none focus:ring-active font-medium rounded-lg text-sm w-full sm:w-auto px-5 py-2.5 text-center dark:bg-active dark:hover:bg-active dark:focus:ring-active disabled:bg-active disabled:bg-opacity-25">Login</button>
+          type="submit" className="text-white bg-active hover:bg-active focus:ring-4 focus:outline-none focus:ring-active font-medium rounded-lg text-sm w-full sm:w-auto px-5 py-2.5 text-center dark:bg-active dark:hover:bg-active dark:focus:ring-active disabled:bg-active disabled:bg-opacity-25">Update Password</button>
       </form>
 
     </>
