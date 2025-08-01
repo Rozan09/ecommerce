@@ -1,72 +1,200 @@
 import axios from 'axios'
-import { useFormik, } from 'formik'
+import { useFormik } from 'formik'
 import React, { useContext, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import * as Yup from 'yup'
 import { AuthContext } from '../../context/AuthContextProvider'
+import toast, { Toaster } from 'react-hot-toast'
+
 export default function Login() {
-  let { setToken } = useContext(AuthContext)
-  let [errorMessage, setError] = useState(null)
-  const baseUrl = 'https://ecommerce.routemisr.com'
-  let navg = useNavigate()
-  let validYup = Yup.object({
-    email: Yup.string().required("email required").email("enter valid email"),
-    password: Yup.string().required("password required").matches(/^(?=.*[0-9])(?=.*[!@#$%^&*])[a-zA-Z0-9!@#$%^&*]{6,16}$/, "password invalid"),
+  const { login } = useContext(AuthContext)
+  const [loading, setLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const navigate = useNavigate()
+
+  const validationSchema = Yup.object({
+    email: Yup.string()
+      .required('Email is required')
+      .email('Please enter a valid email address'),
+    password: Yup.string()
+      .required('Password is required')
+      .min(6, 'Password must be at least 6 characters')
+      .matches(
+        /^(?=.*[0-9])(?=.*[!@#$%^&*])[a-zA-Z0-9!@#$%^&*]{6,16}$/,
+        'Password must contain at least one number and one special character'
+      )
   })
-  let initialValues = {
-    email: "",
-    password: "",
+
+  const initialValues = {
+    email: '',
+    password: ''
   }
-  let LoginForm = useFormik({
+
+  const formik = useFormik({
     initialValues,
-    onSubmit: LoginApi,
-    validationSchema: validYup
-  });
-  async function LoginApi(data) {
-    let req = await axios.post(`${baseUrl}/api/v1/auth/signin`, data)
-      .then((req) => {
-        if (req.data.message == 'success') {
-          setToken(req.data.token)
-          localStorage.setItem("token", req.data.token)
-          navg('/')
-        }
-      })
-      .catch((err) => {
-        setError(err.response.data.message)
-      });
+    validationSchema,
+    onSubmit: handleLogin
+  })
 
+  async function handleLogin(values) {
+    setLoading(true)
+    
+    try {
+      const response = await axios.post(
+        'https://ecommerce.routemisr.com/api/v1/auth/signin',
+        values
+      )
+
+      if (response.data.message === 'success') {
+        // Use the login function from context
+        login(response.data.user, response.data.token)
+        toast.success('Login successful! Welcome back!')
+        navigate('/')
+      }
+    } catch (error) {
+      console.error('Login error:', error)
+      
+      const errorMessage = error.response?.data?.message || 
+        error.response?.data?.error || 
+        'Login failed. Please check your credentials and try again.'
+      
+      toast.error(errorMessage)
+    } finally {
+      setLoading(false)
+    }
   }
+
   return (
-    <>
-      {errorMessage ?
-        <div className="p-4 mb-4 w-1/4 mx-auto text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400" role="alert"> {errorMessage}
-        </div> : ""}
-
-      <form onSubmit={LoginForm.handleSubmit} className="w-6/12 mt-5 mx-auto">
-
-        <div className="mb-5">
-          <label htmlFor="email" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Your email</label>
-          <input onChange={LoginForm.handleChange}
-            onBlur={LoginForm.handleBlur}
-            value={LoginForm.values.email}
-            type="email" id="email" name="email" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-active focus:border-active block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-active dark:focus:border-active" />
-          {LoginForm.touched.email && LoginForm.errors.email ? <p className="text-red-950">{LoginForm.errors.email}</p> : ""}
+    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+      <Toaster position="top-right" />
+      
+      <div className="sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="flex justify-center">
+          <img 
+            src="/src/assets/images/freshcart-logo.svg" 
+            alt="FreshCart Logo" 
+            className="h-12 w-auto"
+          />
         </div>
-        <div className="mb-5">
-          <label htmlFor="password" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Your password</label>
-          <input onChange={LoginForm.handleChange}
-            onBlur={LoginForm.handleBlur}
-            value={LoginForm.values.password} type="password" id="password" name="password" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-active focus:border-active block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-active dark:focus:border-active" />
-          {LoginForm.touched.password && LoginForm.errors.password ? <p className="text-red-950">{LoginForm.errors.password}</p> : ""}
-        </div>
-        <Link to="/ForgetPassword">Forget Password ?</Link>
-        <br/>
-        <br/>
-        <button
-          disabled={!(LoginForm.isValid && LoginForm.dirty)}
-          type="submit" className="text-white bg-active hover:bg-active focus:ring-4 focus:outline-none focus:ring-active font-medium rounded-lg text-sm w-full sm:w-auto px-5 py-2.5 text-center dark:bg-active dark:hover:bg-active dark:focus:ring-active disabled:bg-active disabled:bg-opacity-25">Login</button>
-      </form>
+        <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-gray-900">
+          Sign in to your account
+        </h2>
+        <p className="mt-2 text-center text-sm text-gray-600">
+          Or{' '}
+          <Link 
+            to="/Register" 
+            className="font-medium text-[--main-color] hover:text-[--main-color-dark] transition-colors"
+          >
+            create a new account
+          </Link>
+        </p>
+      </div>
 
-    </>
+      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+          <form onSubmit={formik.handleSubmit} className="space-y-6">
+            {/* Email Field */}
+            <div>
+              <label 
+                htmlFor="email" 
+                className="form-label"
+              >
+                Email address
+              </label>
+              <div className="mt-1">
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  value={formik.values.email}
+                  className={`form-input ${
+                    formik.touched.email && formik.errors.email 
+                      ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
+                      : ''
+                  }`}
+                  placeholder="Enter your email"
+                />
+                {formik.touched.email && formik.errors.email && (
+                  <p className="form-error">{formik.errors.email}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Password Field */}
+            <div>
+              <label 
+                htmlFor="password" 
+                className="form-label"
+              >
+                Password
+              </label>
+              <div className="mt-1 relative">
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  required
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  value={formik.values.password}
+                  className={`form-input pr-10 ${
+                    formik.touched.password && formik.errors.password 
+                      ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
+                      : ''
+                  }`}
+                  placeholder="Enter your password"
+                />
+                <button
+                  type="button"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  <i className={`fas ${showPassword ? 'fa-eye-slash' : 'fa-eye'} text-gray-400 hover:text-gray-600`}></i>
+                </button>
+                {formik.touched.password && formik.errors.password && (
+                  <p className="form-error">{formik.errors.password}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Forgot Password Link */}
+            <div className="flex items-center justify-between">
+              <div className="text-sm">
+                <Link 
+                  to="/ForgetPassword" 
+                  className="font-medium text-[--main-color] hover:text-[--main-color-dark] transition-colors"
+                >
+                  Forgot your password?
+                </Link>
+              </div>
+            </div>
+
+            {/* Submit Button */}
+            <div>
+              <button
+                type="submit"
+                disabled={loading || !(formik.isValid && formik.dirty)}
+                className="w-full btn disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+              >
+                {loading ? (
+                  <>
+                    <div className="loader w-4 h-4 mr-2"></div>
+                    Signing in...
+                  </>
+                ) : (
+                  'Sign in'
+                )}
+              </button>
+            </div>
+
+          </form>
+        </div>
+      </div>
+    </div>
   )
 }

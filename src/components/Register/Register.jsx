@@ -1,92 +1,282 @@
 import axios from 'axios'
-import { useFormik, } from 'formik'
+import { useFormik } from 'formik'
 import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import * as Yup from 'yup'
+import toast, { Toaster } from 'react-hot-toast'
+
 export default function Register() {
-  let [errorMessage, setError] = useState(null)
-  const baseUrl = 'https://ecommerce.routemisr.com'
-  let navg = useNavigate()
-  let validYup = Yup.object({
-    name: Yup.string().required('name required').min(3, "min char 3").max(20, "max char 20"),
-    email: Yup.string().required("email required").email("enter valid email"),
-    password: Yup.string().required("password required").matches(/^(?=.*[0-9])(?=.*[!@#$%^&*])[a-zA-Z0-9!@#$%^&*]{6,16}$/, "password invalid"),
-    rePassword: Yup.string().required("repassword required").oneOf([Yup.ref('password')], "repassword is not matching the password"),
-    phone: Yup.string().required("phone required").matches(/^(20)?01[1250][0-9]{8}$/, "enter valid phone")
+  const [loading, setLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showRePassword, setShowRePassword] = useState(false)
+  const navigate = useNavigate()
+
+  const validationSchema = Yup.object({
+    name: Yup.string()
+      .required('Name is required')
+      .min(3, 'Name must be at least 3 characters')
+      .max(20, 'Name must be less than 20 characters'),
+    email: Yup.string()
+      .required('Email is required')
+      .email('Please enter a valid email address'),
+    password: Yup.string()
+      .required('Password is required')
+      .min(6, 'Password must be at least 6 characters')
+      .matches(
+        /^(?=.*[0-9])(?=.*[!@#$%^&*])[a-zA-Z0-9!@#$%^&*]{6,16}$/,
+        'Password must contain at least one number and one special character'
+      ),
+    rePassword: Yup.string()
+      .required('Please confirm your password')
+      .oneOf([Yup.ref('password')], 'Passwords must match'),
+    phone: Yup.string()
+      .required('Phone number is required')
+      .matches(/^(20)?01[1250][0-9]{8}$/, 'Please enter a valid Egyptian phone number')
   })
-  let initialValues = {
-    name: "",
-    email: "",
-    password: "",
-    rePassword: "",
-    phone: ""
+
+  const initialValues = {
+    name: '',
+    email: '',
+    password: '',
+    rePassword: '',
+    phone: ''
   }
-  let registerForm = useFormik({
+
+  const formik = useFormik({
     initialValues,
-    onSubmit: registerApi,
-    validationSchema: validYup
-  });
-  async function registerApi(data) {
-    let req = await axios.post(`${baseUrl}/api/v1/auth/signup`, data)
-      .then((req) => {
-        if (req.data.message == 'success') {
-          navg('/login')
-        }
-      })
-      .catch((err) => {
-        setError(err.response.data.message)
-      });
+    validationSchema,
+    onSubmit: handleRegister
+  })
 
+  async function handleRegister(values) {
+    setLoading(true)
+    
+    try {
+      const response = await axios.post(
+        'https://ecommerce.routemisr.com/api/v1/auth/signup',
+        values
+      )
+
+      if (response.data.message === 'success') {
+        toast.success('Registration successful! Please sign in.')
+        navigate('/Login')
+      }
+    } catch (error) {
+      console.error('Registration error:', error)
+      
+      const errorMessage = error.response?.data?.message || 
+        error.response?.data?.error || 
+        'Registration failed. Please try again.'
+      
+      toast.error(errorMessage)
+    } finally {
+      setLoading(false)
+    }
   }
+
   return (
-    <>
-      {errorMessage ?
-        <div className="p-4 mb-4 w-1/4 mx-auto text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400" role="alert"> {errorMessage}
-        </div> : ""}
+    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+      <Toaster position="top-right" />
+      
+      <div className="sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="flex justify-center">
+          <img 
+            src="/src/assets/images/freshcart-logo.svg" 
+            alt="FreshCart Logo" 
+            className="h-12 w-auto"
+          />
+        </div>
+        <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-gray-900">
+          Create your account
+        </h2>
+        <p className="mt-2 text-center text-sm text-gray-600">
+          Or{' '}
+          <Link 
+            to="/Login" 
+            className="font-medium text-[--main-color] hover:text-[--main-color-dark] transition-colors"
+          >
+            sign in to your existing account
+          </Link>
+        </p>
+      </div>
 
-      <form onSubmit={registerForm.handleSubmit} className="w-6/12 mt-5 mx-auto">
-        <div className="mb-5">
-          <label htmlFor="name" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Your name</label>
-          <input onChange={registerForm.handleChange}
-            onBlur={registerForm.handleBlur}
-            value={registerForm.values.name} type="text" id="name" name="name" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-active focus:border-active block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-active dark:focus:border-active" />
-          {registerForm.touched.name && registerForm.errors.name ? <p className="text-red-950">{registerForm.errors.name}</p> : ""}
-        </div>
-        <div className="mb-5">
-          <label htmlFor="email" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Your email</label>
-          <input onChange={registerForm.handleChange}
-            onBlur={registerForm.handleBlur}
-            value={registerForm.values.email}
-            type="email" id="email" name="email" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-active focus:border-active block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-active dark:focus:border-active" />
-          {registerForm.touched.email && registerForm.errors.email ? <p className="text-red-950">{registerForm.errors.email}</p> : ""}
-        </div>
-        <div className="mb-5">
-          <label htmlFor="password" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Your password</label>
-          <input onChange={registerForm.handleChange}
-            onBlur={registerForm.handleBlur}
-            value={registerForm.values.password} type="password" id="password" name="password" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-active focus:border-active block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-active dark:focus:border-active" />
-          {registerForm.touched.password && registerForm.errors.password ? <p className="text-red-950">{registerForm.errors.password}</p> : ""}
-        </div>
-        <div className="mb-5">
-          <label htmlFor="rePassword" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Your rePassword</label>
-          <input onChange={registerForm.handleChange}
-            onBlur={registerForm.handleBlur}
-            value={registerForm.values.rePassword} type="Password" id="rePassword" name="rePassword" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-active focus:border-active block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-active dark:focus:border-active" />
-          {registerForm.touched.rePassword && registerForm.errors.rePassword ? <p className="text-red-950">{registerForm.errors.rePassword}</p> : ""}
-        </div>
-        <div className="mb-5">
-          <label htmlFor="phone" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Your phone</label>
-          <input onChange={registerForm.handleChange}
-            onBlur={registerForm.handleBlur}
-            value={registerForm.values.phone} type="tel" id="phone" name="phone" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-active focus:border-active block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-active dark:focus:border-active" />
-          {registerForm.touched.phone && registerForm.errors.phone ? <p className="text-red-950">{registerForm.errors.phone}</p> : ""}
-        </div>
+      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+          <form onSubmit={formik.handleSubmit} className="space-y-6">
+            {/* Name Field */}
+            <div>
+              <label htmlFor="name" className="form-label">
+                Full Name
+              </label>
+              <div className="mt-1">
+                <input
+                  id="name"
+                  name="name"
+                  type="text"
+                  autoComplete="name"
+                  required
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  value={formik.values.name}
+                  className={`form-input ${
+                    formik.touched.name && formik.errors.name 
+                      ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
+                      : ''
+                  }`}
+                  placeholder="Enter your full name"
+                />
+                {formik.touched.name && formik.errors.name && (
+                  <p className="form-error">{formik.errors.name}</p>
+                )}
+              </div>
+            </div>
 
-        <button
-          disabled={!(registerForm.isValid && registerForm.dirty)}
-          type="submit" className="text-white bg-active hover:bg-active focus:ring-4 focus:outline-none focus:ring-active font-medium rounded-lg text-sm w-full sm:w-auto px-5 py-2.5 text-center dark:bg-active dark:hover:bg-active dark:focus:ring-active disabled:bg-active disabled:bg-opacity-25">Submit</button>
-      </form>
+            {/* Email Field */}
+            <div>
+              <label htmlFor="email" className="form-label">
+                Email address
+              </label>
+              <div className="mt-1">
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  value={formik.values.email}
+                  className={`form-input ${
+                    formik.touched.email && formik.errors.email 
+                      ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
+                      : ''
+                  }`}
+                  placeholder="Enter your email"
+                />
+                {formik.touched.email && formik.errors.email && (
+                  <p className="form-error">{formik.errors.email}</p>
+                )}
+              </div>
+            </div>
 
-    </>
+            {/* Phone Field */}
+            <div>
+              <label htmlFor="phone" className="form-label">
+                Phone Number
+              </label>
+              <div className="mt-1">
+                <input
+                  id="phone"
+                  name="phone"
+                  type="tel"
+                  autoComplete="tel"
+                  required
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  value={formik.values.phone}
+                  className={`form-input ${
+                    formik.touched.phone && formik.errors.phone 
+                      ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
+                      : ''
+                  }`}
+                  placeholder="Enter your phone number"
+                />
+                {formik.touched.phone && formik.errors.phone && (
+                  <p className="form-error">{formik.errors.phone}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Password Field */}
+            <div>
+              <label htmlFor="password" className="form-label">
+                Password
+              </label>
+              <div className="mt-1 relative">
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  required
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  value={formik.values.password}
+                  className={`form-input pr-10 ${
+                    formik.touched.password && formik.errors.password 
+                      ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
+                      : ''
+                  }`}
+                  placeholder="Enter your password"
+                />
+                <button
+                  type="button"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  <i className={`fas ${showPassword ? 'fa-eye-slash' : 'fa-eye'} text-gray-400 hover:text-gray-600`}></i>
+                </button>
+                {formik.touched.password && formik.errors.password && (
+                  <p className="form-error">{formik.errors.password}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Confirm Password Field */}
+            <div>
+              <label htmlFor="rePassword" className="form-label">
+                Confirm Password
+              </label>
+              <div className="mt-1 relative">
+                <input
+                  id="rePassword"
+                  name="rePassword"
+                  type={showRePassword ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  required
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  value={formik.values.rePassword}
+                  className={`form-input pr-10 ${
+                    formik.touched.rePassword && formik.errors.rePassword 
+                      ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
+                      : ''
+                  }`}
+                  placeholder="Confirm your password"
+                />
+                <button
+                  type="button"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  onClick={() => setShowRePassword(!showRePassword)}
+                >
+                  <i className={`fas ${showRePassword ? 'fa-eye-slash' : 'fa-eye'} text-gray-400 hover:text-gray-600`}></i>
+                </button>
+                {formik.touched.rePassword && formik.errors.rePassword && (
+                  <p className="form-error">{formik.errors.rePassword}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Submit Button */}
+            <div>
+              <button
+                type="submit"
+                disabled={loading || !(formik.isValid && formik.dirty)}
+                className="w-full btn disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+              >
+                {loading ? (
+                  <>
+                    <div className="loader w-4 h-4 mr-2"></div>
+                    Creating account...
+                  </>
+                ) : (
+                  'Create account'
+                )}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
   )
 }
